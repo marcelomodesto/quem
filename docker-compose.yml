@@ -1,0 +1,63 @@
+services:
+  db:
+    image: mariadb:11
+    container_name: guiaquem-db
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: guiaquem
+      MYSQL_USER: guiaquem
+      MYSQL_PASSWORD: guiaquem
+    ports:
+      - "3307:3306"
+    volumes:
+      - mariadb_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  migrate:
+    build:
+      context: .
+      target: migrator
+    container_name: guiaquem-migrate
+    environment:
+      DATABASE_URL: "mysql://guiaquem:guiaquem@db:3306/guiaquem"
+    command: sh -c "npx prisma db push --accept-data-loss && npx prisma db seed"
+    depends_on:
+      db:
+        condition: service_healthy
+    profiles:
+      - tools
+
+  app:
+    build: .
+    container_name: guiaquem-app
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: "mysql://guiaquem:guiaquem@db:3306/guiaquem"
+      NODE_ENV: production
+    ports:
+      - "3000:3000"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    container_name: guiaquem-phpmyadmin
+    restart: unless-stopped
+    environment:
+      PMA_HOST: db
+      PMA_PORT: 3306
+      MYSQL_ROOT_PASSWORD: rootpassword
+    ports:
+      - "8080:80"
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  mariadb_data:
