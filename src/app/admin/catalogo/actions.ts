@@ -129,7 +129,20 @@ export async function reorderGroups(orderedIds: number[]) {
   revalidatePath("/admin/catalogo");
 }
 
+async function isDescendant(groupId: number, targetId: number): Promise<boolean> {
+  const target = await prisma.group.findUnique({ where: { id: targetId } });
+  if (!target) return false;
+  if (target.parentId === null) return false;
+  if (target.parentId === groupId) return true;
+  return isDescendant(groupId, target.parentId);
+}
+
 export async function moveGroup(id: number, newParentId: number | null) {
+  if (newParentId !== null && newParentId !== id) {
+    const circular = await isDescendant(id, newParentId);
+    if (circular) return { error: "Nao e possivel mover um grupo para dentro de seu proprio subgrupo." };
+  }
+
   await prisma.group.update({
     where: { id },
     data: { parentId: newParentId },
@@ -297,6 +310,28 @@ export async function deletePerson(id: number) {
   await prisma.person.update({
     where: { id },
     data: { deletedAt: new Date() },
+  });
+
+  revalidatePath("/admin/catalogo");
+  return { success: true };
+}
+
+export async function getDeletedPeople() {
+  return prisma.person.findMany({
+    where: { deletedAt: { not: null } },
+    orderBy: { name: "asc" },
+    include: {
+      group: {
+        select: { id: true, name: true },
+      },
+    },
+  });
+}
+
+export async function restorePerson(id: number) {
+  await prisma.person.update({
+    where: { id },
+    data: { deletedAt: null },
   });
 
   revalidatePath("/admin/catalogo");

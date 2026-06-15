@@ -311,6 +311,8 @@ O sistema deve permitir:
 * Reordenar pessoas dentro de um grupo.
 * Ocultar pessoas.
 * Selecionar múltiplas pessoas simultaneamente.
+* Excluir pessoas
+* Restaurar pessoas excluídas
 
 ---
 
@@ -532,6 +534,7 @@ Quando uma pessoa for excluída:
 * Não deve aparecer no catálogo.
 * Não deve aparecer nas buscas.
 * Não deve reaparecer em futuras sincronizações mesmo que volte a existir na API.
+* Deve aparecer apenas em um painel a parte para que possa ser restaurada.
 
 Essa regra evita que exclusões deliberadas do gestor sejam revertidas.
 

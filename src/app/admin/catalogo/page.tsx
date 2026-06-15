@@ -15,6 +15,8 @@ import {
   createPerson,
   updatePerson,
   getAllPeople,
+  getDeletedPeople,
+  restorePerson,
 } from "./actions";
 
 type PersonData = {
@@ -56,6 +58,9 @@ export default function CatalogoPage() {
   const [selectedPeople, setSelectedPeople] = useState<Set<number>>(new Set());
   const [personSearch, setPersonSearch] = useState("");
   const [showMoveModal, setShowMoveModal] = useState(false);
+  const [deletedPeople, setDeletedPeople] = useState<(PersonData & { group: { id: number; name: string } | null })[]>([]);
+  const [showDeletedPanel, setShowDeletedPanel] = useState(false);
+  const [showGroupMoveModal, setShowGroupMoveModal] = useState<number | null>(null);
 
   const loadData = useCallback(async () => {
     const [g, p] = await Promise.all([getGroups(), getAllPeople()]);
@@ -94,6 +99,23 @@ export default function CatalogoPage() {
     await moveMultiplePeopleToGroup(ids, targetGroupId);
     clearSelection();
     setShowMoveModal(false);
+    loadData();
+  };
+
+  const loadDeletedPeople = async () => {
+    const dp = await getDeletedPeople();
+    setDeletedPeople(dp as (PersonData & { group: { id: number; name: string } | null })[]);
+  };
+
+  const handleRestorePerson = async (id: number) => {
+    await restorePerson(id);
+    await loadDeletedPeople();
+    loadData();
+  };
+
+  const handleMoveGroup = async (groupId: number, targetGroupId: number | null) => {
+    await moveGroup(groupId, targetGroupId);
+    setShowGroupMoveModal(null);
     loadData();
   };
 
@@ -200,6 +222,10 @@ export default function CatalogoPage() {
     <div className="h-[calc(100vh-5rem)] flex flex-col">
       <div className="flex items-center justify-between mb-4 shrink-0">
         <h1 className="text-3xl font-bold text-gray-900">Organizacao do Catalogo</h1>
+        <button onClick={() => { loadDeletedPeople(); setShowDeletedPanel(!showDeletedPanel); }}
+          className={`px-4 py-2 rounded-lg text-sm font-semibold transition-colors ${showDeletedPanel ? "bg-red-700 text-white hover:bg-red-800" : "bg-red-100 text-red-700 hover:bg-red-200"}`}>
+          Pessoas Excluidas
+        </button>
       </div>
       <p className="text-sm text-gray-500 mb-4 shrink-0">
         Arraste pessoas entre grupos. Grupos podem ser aninhados criando subgrupos.
@@ -267,12 +293,14 @@ export default function CatalogoPage() {
                 onDragOver={(e) => handleDragOver(e, `group-${group.id}`)}
                 onDragLeave={handleDragLeave}
                 onDrop={(e) => handleDrop(e, group.id)}
+                onSetDropTarget={setDropTarget}
                 onDragStartPerson={handleDragStartPerson}
                 onEditGroup={() => setEditingGroup(group.id)}
                 onUpdateGroup={(name) => handleUpdateGroup(group.id, name)}
                 onCancelEditGroup={() => setEditingGroup(null)}
                 onToggleGroupHidden={() => toggleGroupHidden(group.id).then(loadData)}
                 onDeleteGroup={() => handleDeleteGroup(group.id)}
+                onMoveGroup={(id) => setShowGroupMoveModal(id)}
                 onShowNewSubGroup={(id) => { setShowNewGroup(id); setNewGroupName(""); }}
                 onNewGroupNameChange={setNewGroupName}
                 onCreateSubGroup={(parentId) => handleCreateGroup(parentId)}
@@ -341,9 +369,48 @@ export default function CatalogoPage() {
         </div>
       </div>
 
+      {showDeletedPanel && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4 shrink-0 max-h-64 overflow-y-auto">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="font-semibold text-red-900">
+              Pessoas Excluidas ({deletedPeople.length})
+            </h3>
+            <button onClick={() => setShowDeletedPanel(false)} className="text-red-400 hover:text-red-600 text-sm">Fechar</button>
+          </div>
+          {deletedPeople.length === 0 ? (
+            <p className="text-sm text-red-400 italic">Nenhuma pessoa excluida</p>
+          ) : (
+            <div className="space-y-1">
+              {deletedPeople.map((person) => (
+                <div key={person.id} className="flex items-center gap-2 px-3 py-2 rounded-lg border border-red-100 bg-white">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium text-gray-900 truncate">{person.name}</span>
+                      {person.origin === "API" && <span className="text-[10px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded">API</span>}
+                      {person.origin === "MANUAL" && <span className="text-[10px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded">Local</span>}
+                      {person.group && <span className="text-[10px] bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded">{person.group.name}</span>}
+                    </div>
+                    {person.email && <div className="text-xs text-gray-400 truncate">{person.email}</div>}
+                  </div>
+                  <button onClick={() => handleRestorePerson(person.id)}
+                    className="bg-green-600 text-white px-3 py-1 rounded text-xs font-semibold hover:bg-green-700 shrink-0">
+                    Restaurar
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
       {showMoveModal && (
         <BatchMoveModal groups={groups} selectedCount={selectedPeople.size}
           onMove={handleBatchMove} onClose={() => setShowMoveModal(false)} />
+      )}
+
+      {showGroupMoveModal !== null && (
+        <GroupMoveModal groups={groups} groupId={showGroupMoveModal}
+          onMove={handleMoveGroup} onClose={() => setShowGroupMoveModal(null)} />
       )}
     </div>
   );
@@ -424,6 +491,66 @@ function GroupRadioItem({ group, level, targetGroupId, onSelect }: {
   );
 }
 
+function collectDescendantIds(group: GroupData): number[] {
+  const ids: number[] = [];
+  for (const child of group.children ?? []) {
+    ids.push(child.id);
+    ids.push(...collectDescendantIds(child));
+  }
+  return ids;
+}
+
+function GroupMoveModal({ groups, groupId, onMove, onClose }: {
+  groups: GroupData[]; groupId: number;
+  onMove: (groupId: number, targetGroupId: number | null) => void; onClose: () => void;
+}) {
+  const [targetGroupId, setTargetGroupId] = useState<number | null>(null);
+
+  const excludedIds = new Set<number>([groupId]);
+  for (const g of groups) {
+    if (g.id === groupId) {
+      for (const id of collectDescendantIds(g)) excludedIds.add(id);
+    }
+  }
+
+  const filteredGroups = groups.filter((g) => !excludedIds.has(g.id));
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={onClose}>
+      <div className="bg-white rounded-lg p-6 max-w-md w-full max-h-[80vh] overflow-auto" onClick={(e) => e.stopPropagation()}>
+        <h3 className="text-lg font-bold mb-4">Mover grupo para:</h3>
+
+        <div className="space-y-1">
+          <label className={`flex items-center gap-2 p-2 rounded cursor-pointer ${targetGroupId === null ? "bg-blue-50 border border-blue-300" : "hover:bg-gray-100"}`}>
+            <input type="radio" name="target" checked={targetGroupId === null}
+              onChange={() => setTargetGroupId(null)} className="accent-blue-600" />
+            <span className="text-sm font-medium">Raiz</span>
+          </label>
+
+          {filteredGroups.map((group) => (
+            <GroupRadioItem key={group.id} group={group} level={0}
+              targetGroupId={targetGroupId} onSelect={setTargetGroupId} />
+          ))}
+        </div>
+
+        {filteredGroups.length === 0 && (
+          <p className="text-sm text-gray-400 italic py-2">Nenhum grupo disponivel como destino</p>
+        )}
+
+        <div className="flex gap-2 mt-6 justify-end">
+          <button onClick={onClose} className="px-4 py-2 border border-gray-300 rounded-lg text-sm hover:bg-gray-50">
+            Cancelar
+          </button>
+          <button onClick={() => onMove(groupId, targetGroupId)}
+            className="px-4 py-2 bg-blue-700 text-white rounded-lg text-sm font-semibold hover:bg-blue-800">
+            Mover
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function NewGroupForm({ value, onChange, onCreate, onCancel }: {
   value: string; onChange: (v: string) => void; onCreate: () => void; onCancel: () => void;
 }) {
@@ -439,14 +566,14 @@ function NewGroupForm({ value, onChange, onCreate, onCancel }: {
   );
 }
 
-function GroupCard({ group, editingGroup, editingPerson, dropTarget, newGroup, newGroupName, selectedPeople, onDragStartGroup, onDragOver, onDragLeave, onDrop, onDragStartPerson, onEditGroup, onUpdateGroup, onCancelEditGroup, onToggleGroupHidden, onDeleteGroup, onShowNewSubGroup, onNewGroupNameChange, onCreateSubGroup, onCancelNewGroup, onEditPerson, onCancelEditPerson, onUpdatePerson, onTogglePersonHidden, onDeletePerson, onToggleSelectPerson }: {
+function GroupCard({ group, editingGroup, editingPerson, dropTarget, newGroup, newGroupName, selectedPeople, onDragStartGroup, onDragOver, onDragLeave, onDrop, onSetDropTarget, onDragStartPerson, onEditGroup, onUpdateGroup, onCancelEditGroup, onToggleGroupHidden, onDeleteGroup, onMoveGroup, onShowNewSubGroup, onNewGroupNameChange, onCreateSubGroup, onCancelNewGroup, onEditPerson, onCancelEditPerson, onUpdatePerson, onTogglePersonHidden, onDeletePerson, onToggleSelectPerson }: {
   group: GroupData; editingGroup: number | null; editingPerson: number | null; dropTarget: string | null;
   newGroup: number | null; newGroupName: string; selectedPeople: Set<number>;
   onDragStartGroup: (e: React.DragEvent) => void; onDragOver: (e: React.DragEvent) => void;
-  onDragLeave: () => void; onDrop: (e: React.DragEvent) => void;
+  onDragLeave: () => void; onDrop: (e: React.DragEvent) => void; onSetDropTarget: (id: string | null) => void;
   onDragStartPerson: (e: React.DragEvent, id: number) => void;
   onEditGroup: () => void; onUpdateGroup: (name: string) => void; onCancelEditGroup: () => void;
-  onToggleGroupHidden: () => void; onDeleteGroup: () => void;
+  onToggleGroupHidden: () => void; onDeleteGroup: () => void; onMoveGroup: (groupId: number) => void;
   onShowNewSubGroup: (id: number) => void; onNewGroupNameChange: (v: string) => void;
   onCreateSubGroup: (parentId: number) => void; onCancelNewGroup: () => void;
   onEditPerson: (id: number) => void; onCancelEditPerson: () => void;
@@ -473,6 +600,7 @@ function GroupCard({ group, editingGroup, editingPerson, dropTarget, newGroup, n
             <button onClick={onEditGroup} className="text-gray-400 hover:text-blue-600 text-sm">Editar</button>
             <button onClick={onToggleGroupHidden} className="text-gray-400 hover:text-yellow-600 text-sm">{group.isHidden ? "Mostrar" : "Ocultar"}</button>
             <button onClick={() => onShowNewSubGroup(group.id)} className="text-gray-400 hover:text-green-600 text-sm">+Sub</button>
+            <button onClick={() => onMoveGroup(group.id)} className="text-gray-400 hover:text-purple-600 text-sm">Mover</button>
             <button onClick={onDeleteGroup} className="text-gray-400 hover:text-red-600 text-sm">Excluir</button>
           </>
         )}
@@ -509,15 +637,17 @@ function GroupCard({ group, editingGroup, editingPerson, dropTarget, newGroup, n
               dropTarget={dropTarget} newGroup={newGroup} newGroupName={newGroupName}
               selectedPeople={selectedPeople}
               onDragStartGroup={(e) => onDragStartGroup(e)}
-              onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
+              onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); onSetDropTarget(`group-${child.id}`); }}
               onDragLeave={onDragLeave}
-              onDrop={(e) => onDrop(e)}
+              onDrop={(e) => { e.preventDefault(); e.stopPropagation(); onDrop(e); }}
+              onSetDropTarget={onSetDropTarget}
               onDragStartPerson={onDragStartPerson}
               onEditGroup={onEditGroup}
               onUpdateGroup={onUpdateGroup}
               onCancelEditGroup={onCancelEditGroup}
               onToggleGroupHidden={onToggleGroupHidden}
               onDeleteGroup={onDeleteGroup}
+              onMoveGroup={onMoveGroup}
               onShowNewSubGroup={onShowNewSubGroup}
               onNewGroupNameChange={onNewGroupNameChange}
               onCreateSubGroup={onCreateSubGroup}
