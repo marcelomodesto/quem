@@ -23,9 +23,10 @@ services:
       context: .
       target: migrator
     container_name: guiaquem-migrate
+    env_file: .env
     environment:
       DATABASE_URL: "mysql://guiaquem:guiaquem@db:3306/guiaquem"
-    command: sh -c "npx prisma db push --accept-data-loss && npx prisma db seed"
+    command: sh -c "npx prisma db push --accept-data-loss && npx tsx prisma/seed.ts"
     depends_on:
       db:
         condition: service_healthy

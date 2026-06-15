@@ -295,7 +295,62 @@ Registrar:
 * Pessoas excluídas.
 * Alterações de organização.
 
+
 ---
+# Criação do Usuário Administrador Inicial
+
+O sistema deve suportar a criação automática do primeiro usuário administrador durante a instalação.
+
+## Configuração
+
+As seguintes variáveis de ambiente devem ser suportadas:
+
+```env
+ADMIN_NAME=Administrador
+ADMIN_EMAIL=admin@example.com
+ADMIN_PASSWORD=senha-inicial
+```
+
+## Comportamento
+
+Durante a inicialização da aplicação ou execução do seed:
+
+1. Verificar se já existe algum usuário com perfil `ADMIN`.
+2. Caso exista pelo menos um administrador, nenhuma ação deve ser realizada.
+3. Caso não exista nenhum administrador, criar automaticamente o usuário administrador utilizando os dados fornecidos pelas variáveis de ambiente.
+4. A senha deve ser armazenada utilizando hash seguro (bcrypt ou argon2).
+5. O usuário criado automaticamente deve possuir perfil `ADMIN`.
+
+## Requisitos
+
+* A operação deve ser idempotente.
+* Não deve criar administradores duplicados.
+* Alterações posteriores nas variáveis de ambiente não devem modificar administradores já existentes.
+* A criação automática deve ocorrer apenas quando não existir nenhum administrador cadastrado.
+
+## Objetivo
+
+Permitir que novas instalações do GuiaQuem possuam um usuário administrativo inicial sem necessidade de manipulação direta do banco de dados.
+
+# Estratégia Recomendada
+
+Implementar a criação do administrador inicial através de um seed Prisma.
+
+Não utilizar credenciais fixas no código-fonte.
+
+Todas as credenciais iniciais devem ser obtidas exclusivamente das variáveis de ambiente.
+
+Exemplo:
+
+```env
+ADMIN_NAME=Administrador
+ADMIN_EMAIL=admin@local
+ADMIN_PASSWORD=trocar-esta-senha
+```
+---
+
+
+
 
 # Funcionalidades Futuras Desejáveis
 

@@ -107,9 +107,9 @@ model Category {
 
 model SyncLog {
   id         Int      @id @default(autoincrement())
-  status     String
-  message    String?
-  imported   Int      @default(0)
+  status  String
+  message String? @db.Text
+  imported Int      @default(0)
   updated    Int      @default(0)
   removed    Int      @default(0)
   createdAt  DateTime @default(now())

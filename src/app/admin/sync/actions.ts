@@ -48,14 +48,6 @@ async function getApiCredentials() {
   };
 }
 
-async function decryptPassword(encrypted: string): Promise<string> {
-  // The password is stored as bcrypt hash, but the API expects the plain text.
-  // We cannot reverse bcrypt. The password field should store the plain text
-  // for API consumption, and only the API password needs encryption for storage.
-  // For now, return the stored value as-is since the user enters it fresh each time.
-  return encrypted;
-}
-
 async function fetchApi<T>(url: string, credentials: { user: string; password: string }): Promise<T[]> {
   const authHeader =
     credentials.user
@@ -173,14 +165,12 @@ export async function runSync() {
       throw new Error("URL da API não configurada.");
     }
 
-    const decryptedPass = await decryptPassword(creds.password);
-
     // Fetch docentes
     let docentes: ApiDocente[] = [];
     try {
       docentes = await fetchApi<ApiDocente>(`${creds.url}/docentes`, {
         user: creds.user,
-        password: decryptedPass,
+        password: creds.password,
       });
     } catch (e) {
       result.errors.push(`Erro ao buscar docentes: ${e instanceof Error ? e.message : String(e)}`);
@@ -191,7 +181,7 @@ export async function runSync() {
     try {
       funcionarios = await fetchApi<ApiFuncionario>(`${creds.url}/funcionarios`, {
         user: creds.user,
-        password: decryptedPass,
+        password: creds.password,
       });
     } catch (e) {
       result.errors.push(`Erro ao buscar funcionários: ${e instanceof Error ? e.message : String(e)}`);

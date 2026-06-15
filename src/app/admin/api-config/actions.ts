@@ -1,7 +1,6 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
-import bcrypt from "bcryptjs";
 import { revalidatePath } from "next/cache";
 
 const KEYS = {
@@ -51,8 +50,7 @@ export async function saveApiConfig(formData: FormData) {
   await upsertSetting(KEYS.USER, user);
 
   if (password) {
-    const encrypted = await bcrypt.hash(password, 10);
-    await upsertSetting(KEYS.PASSWORD, encrypted);
+    await upsertSetting(KEYS.PASSWORD, password);
   }
 
   revalidatePath("/admin/api-config");
