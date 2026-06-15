@@ -33,27 +33,23 @@ model Setting {
 }
 
 model Person {
-  id           Int      @id @default(autoincrement())
-  externalId   String?  @unique @map("external_id")
-  origin       Origin   @default(MANUAL)
-  name         String
-  email        String?
-  phone        String?
-  room         String?
-  role         String?
-  designation  String?
-  departmentId Int?     @map("department_id")
-  sectorId     Int?     @map("sector_id")
-  categoryId   Int?     @map("category_id")
-  sortOrder    Int      @default(0) @map("sort_order")
-  isHidden     Boolean  @default(false) @map("is_hidden")
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-  deletedAt    DateTime? @map("deleted_at")
+  id          Int      @id @default(autoincrement())
+  externalId  String?  @unique @map("external_id")
+  origin      Origin   @default(MANUAL)
+  name        String
+  email       String?
+  phone       String?
+  room        String?
+  role        String?
+  designation String?
+  groupId     Int?     @map("group_id")
+  sortOrder   Int      @default(0) @map("sort_order")
+  isHidden    Boolean  @default(false) @map("is_hidden")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  deletedAt   DateTime? @map("deleted_at")
 
-  department Department? @relation(fields: [departmentId], references: [id])
-  sector     Sector?     @relation(fields: [sectorId], references: [id])
-  category   Category?   @relation(fields: [categoryId], references: [id])
+  group Group? @relation(fields: [groupId], references: [id])
 
   @@map("people")
 }
@@ -63,56 +59,31 @@ enum Origin {
   MANUAL
 }
 
-model Department {
+model Group {
   id        Int      @id @default(autoincrement())
   name      String
+  parentId  Int?     @map("parent_id")
   sortOrder Int      @default(0) @map("sort_order")
+  isHidden  Boolean  @default(false) @map("is_hidden")
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   deletedAt DateTime? @map("deleted_at")
 
-  people  Person[]
-  sectors Sector[]
+  parent   Group?  @relation("GroupHierarchy", fields: [parentId], references: [id])
+  children Group[] @relation("GroupHierarchy")
+  people   Person[]
 
-  @@map("departments")
-}
-
-model Sector {
-  id           Int      @id @default(autoincrement())
-  name         String
-  departmentId Int      @map("department_id")
-  sortOrder    Int      @default(0) @map("sort_order")
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-  deletedAt    DateTime? @map("deleted_at")
-
-  department Department @relation(fields: [departmentId], references: [id])
-  people     Person[]
-
-  @@map("sectors")
-}
-
-model Category {
-  id        Int      @id @default(autoincrement())
-  name      String
-  sortOrder Int      @default(0) @map("sort_order")
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  deletedAt DateTime? @map("deleted_at")
-
-  people Person[]
-
-  @@map("categories")
+  @@map("groups")
 }
 
 model SyncLog {
-  id         Int      @id @default(autoincrement())
-  status  String
-  message String? @db.Text
-  imported Int      @default(0)
-  updated    Int      @default(0)
-  removed    Int      @default(0)
-  createdAt  DateTime @default(now())
+  id        Int      @id @default(autoincrement())
+  status    String
+  message   String?  @db.Text
+  imported  Int      @default(0)
+  updated   Int      @default(0)
+  removed   Int      @default(0)
+  createdAt DateTime @default(now())
 
   @@map("sync_logs")
 }

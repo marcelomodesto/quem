@@ -26,8 +26,7 @@ type ApiFuncionario = {
 };
 
 type SyncResult = {
-  departmentsCreated: number;
-  sectorsCreated: number;
+  groupsCreated: number;
   docentesImported: number;
   docentesUpdated: number;
   funcionariosImported: number;
@@ -42,9 +41,9 @@ async function getApiCredentials() {
   });
   const map = new Map(settings.map((s) => [s.key, s.value]));
   return {
-    url: map.get("api_url") ?? "",
-    user: map.get("api_user") ?? "",
-    password: map.get("api_password") ?? "",
+    url: map.get("api_url") || process.env.API_URL || "",
+    user: map.get("api_user") || process.env.API_USER || "",
+    password: map.get("api_password") || process.env.API_PASSWORD || "",
   };
 }
 
@@ -73,26 +72,16 @@ async function fetchApi<T>(url: string, credentials: { user: string; password: s
     );
   }
 
-  return res.json();
+  return JSON.parse(body) as T[];
 }
 
-async function findOrCreateDepartment(name: string, sortOrder: number) {
-  const existing = await prisma.department.findFirst({
-    where: { name, deletedAt: null },
+async function findOrCreateGroup(name: string, parentId: number | null, sortOrder: number) {
+  const existing = await prisma.group.findFirst({
+    where: { name, parentId, deletedAt: null },
   });
   if (existing) return existing;
-  return prisma.department.create({
-    data: { name, sortOrder },
-  });
-}
-
-async function findOrCreateSector(name: string, departmentId: number, sortOrder: number) {
-  const existing = await prisma.sector.findFirst({
-    where: { name, departmentId, deletedAt: null },
-  });
-  if (existing) return existing;
-  return prisma.sector.create({
-    data: { name, departmentId, sortOrder },
+  return prisma.group.create({
+    data: { name, parentId, sortOrder },
   });
 }
 
@@ -104,8 +93,7 @@ async function upsertPerson(data: {
   room?: string;
   role?: string;
   designation?: string;
-  departmentId?: number;
-  sectorId?: number;
+  groupId?: number;
   isHidden: boolean;
 }) {
   const existing = await prisma.person.findUnique({
@@ -123,8 +111,7 @@ async function upsertPerson(data: {
         room: data.room,
         role: data.role,
         designation: data.designation,
-        departmentId: data.departmentId,
-        sectorId: data.sectorId,
+        groupId: data.groupId,
         isHidden: data.isHidden,
       },
     });
@@ -140,8 +127,7 @@ async function upsertPerson(data: {
       room: data.room,
       role: data.role,
       designation: data.designation,
-      departmentId: data.departmentId,
-      sectorId: data.sectorId,
+      groupId: data.groupId,
       isHidden: data.isHidden,
     },
   });
@@ -149,8 +135,7 @@ async function upsertPerson(data: {
 
 export async function runSync() {
   const result: SyncResult = {
-    departmentsCreated: 0,
-    sectorsCreated: 0,
+    groupsCreated: 0,
     docentesImported: 0,
     docentesUpdated: 0,
     funcionariosImported: 0,
@@ -187,23 +172,23 @@ export async function runSync() {
       result.errors.push(`Erro ao buscar funcionários: ${e instanceof Error ? e.message : String(e)}`);
     }
 
-    // Process docentes (grouped by department via "setor" field)
-    const departmentMap = new Map<string, number>();
-    let deptOrder = 0;
+    // Process docentes (grouped by "setor" as top-level groups)
+    const docenteGroupMap = new Map<string, number>();
+    let groupOrder = 0;
 
     for (const d of docentes) {
-      const deptName = d.setor?.trim();
-      if (!deptName) continue;
+      const groupName = d.setor?.trim();
+      if (!groupName) continue;
 
-      if (!departmentMap.has(deptName)) {
-        const dept = await findOrCreateDepartment(deptName, deptOrder++);
-        departmentMap.set(deptName, dept.id);
-        if (dept.createdAt.getTime() === dept.updatedAt.getTime()) {
-          result.departmentsCreated++;
+      if (!docenteGroupMap.has(groupName)) {
+        const group = await findOrCreateGroup(groupName, null, groupOrder++);
+        docenteGroupMap.set(groupName, group.id);
+        if (group.createdAt.getTime() === group.updatedAt.getTime()) {
+          result.groupsCreated++;
         }
       }
 
-      const departmentId = departmentMap.get(deptName)!;
+      const groupId = docenteGroupMap.get(groupName)!;
       const person = await upsertPerson({
         externalId: d.id,
         name: d.nome,
@@ -211,7 +196,7 @@ export async function runSync() {
         phone: d.fone,
         room: d.sala,
         role: d.funcao,
-        departmentId,
+        groupId,
         isHidden: false,
       });
 
@@ -227,26 +212,28 @@ export async function runSync() {
       }
     }
 
-    // Process funcionários (grouped by sector via "setor" field)
-    // Create a default department for sectors if needed
-    const defaultDept = await findOrCreateDepartment("Setores Administrativos", deptOrder++);
+    // Process funcionários (grouped by "setor" under a parent group "Setores Administrativos")
+    const parentGroup = await findOrCreateGroup("Setores Administrativos", null, groupOrder++);
+    if (parentGroup.createdAt.getTime() === parentGroup.updatedAt.getTime()) {
+      result.groupsCreated++;
+    }
 
-    const sectorMap = new Map<string, number>();
-    let sectorOrder = 0;
+    const funcionarioGroupMap = new Map<string, number>();
+    let subGroupOrder = 0;
 
     for (const f of funcionarios) {
-      const sectorName = f.setor?.trim();
-      if (!sectorName) continue;
+      const groupName = f.setor?.trim();
+      if (!groupName) continue;
 
-      if (!sectorMap.has(sectorName)) {
-        const sector = await findOrCreateSector(sectorName, defaultDept.id, sectorOrder++);
-        sectorMap.set(sectorName, sector.id);
-        if (sector.createdAt.getTime() === sector.updatedAt.getTime()) {
-          result.sectorsCreated++;
+      if (!funcionarioGroupMap.has(groupName)) {
+        const group = await findOrCreateGroup(groupName, parentGroup.id, subGroupOrder++);
+        funcionarioGroupMap.set(groupName, group.id);
+        if (group.createdAt.getTime() === group.updatedAt.getTime()) {
+          result.groupsCreated++;
         }
       }
 
-      const sectorId = sectorMap.get(sectorName)!;
+      const groupId = funcionarioGroupMap.get(groupName)!;
       const person = await upsertPerson({
         externalId: f.id,
         name: f.nome,
@@ -255,7 +242,7 @@ export async function runSync() {
         room: f.sala,
         role: f.funcao,
         designation: f.designacao,
-        sectorId,
+        groupId,
         isHidden: f.exibir === false,
       });
 
@@ -271,7 +258,7 @@ export async function runSync() {
       }
     }
 
-    // Mark docentes/funcionários no longer in API as "not found"
+    // Mark people no longer in API as "not found" (soft-delete)
     const allExternalIds = [
       ...docentes.map((d) => d.id),
       ...funcionarios.map((f) => f.id),

@@ -27,10 +27,16 @@ export default function AdminLayout({
               Sincronizar
             </Link>
             <Link
+              href="/admin/catalogo"
+              className="hover:text-gray-300 transition-colors"
+            >
+              Catalogo
+            </Link>
+            <Link
               href="/admin/users"
               className="hover:text-gray-300 transition-colors"
             >
-              Usuários
+              Usuarios
             </Link>
             <Link href="/" className="hover:text-gray-300 transition-colors">
               Catálogo Público

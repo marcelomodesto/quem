@@ -140,34 +140,330 @@ Exemplos:
 
 ---
 
-# Reorganização de Pessoas
+# Organização do Catálogo
 
-O principal objetivo do sistema é permitir que o gestor reorganize livremente as pessoas.
+O principal objetivo do GuiaQuem é permitir que o gestor organize livremente as pessoas em uma estrutura hierárquica de catálogo, independentemente da organização original fornecida pela API.
 
-O gestor deve poder:
+A API é responsável apenas por fornecer os dados cadastrais das pessoas e sua classificação de origem. A organização utilizada para publicação no GuiaQuem é mantida exclusivamente pelo sistema.
 
-* Criar departamentos.
-* Criar setores.
-* Criar categorias.
-* Renomear departamentos.
-* Renomear setores.
-* Renomear categorias.
-* Excluir departamentos.
-* Excluir setores.
-* Excluir categorias.
+## Conceito de Grupo
 
-A interface deve possuir recursos modernos de drag-and-drop.
+O GuiaQuem utiliza o conceito de Grupo de Catálogo.
+
+Um grupo representa qualquer tipo de agrupamento utilizado para organizar pessoas.
 
 Exemplos:
 
-* Arrastar uma pessoa para outro setor.
-* Arrastar uma pessoa para outro departamento.
-* Reordenar pessoas dentro de um grupo.
-* Mover múltiplas pessoas.
+* Administração
+* Ensino
+* Pesquisa
+* Matemática
+* Computação
+* Recursos Humanos
+* Informática
 
-A organização realizada pelo gestor nunca deve ser sobrescrita por uma sincronização da API.
+O sistema não deve diferenciar departamentos, setores, seções ou categorias. Todos esses conceitos devem ser representados por grupos.
+
+## Hierarquia de Grupos
+
+Um grupo pode possuir um grupo pai.
+
+A estrutura deve suportar múltiplos níveis hierárquicos.
+
+Exemplo:
+
+```text
+Administração
+├── Recursos Humanos
+├── Financeiro
+└── Informática
+
+Ensino
+├── Matemática
+└── Computação
+```
+
+A profundidade da hierarquia não deve ser limitada pela regra de negócio.
+
+# Organização do Catálogo
+
+## Objetivo
+
+A interface administrativa de organização do catálogo deve permitir que o gestor organize livremente pessoas e grupos, independentemente da estrutura original fornecida pela API.
+
+A solução deve ser eficiente para cenários contendo centenas ou milhares de pessoas.
+
+A API é responsável apenas por fornecer os dados cadastrais das pessoas e sua classificação de origem. A estrutura de publicação do GuiaQuem é mantida exclusivamente pelo sistema.
 
 ---
+
+## Conceito de Grupo
+
+O GuiaQuem utiliza o conceito de Grupo de Catálogo.
+
+Um grupo representa qualquer agrupamento utilizado para organizar pessoas.
+
+Exemplos:
+
+* Administração
+* Ensino
+* Pesquisa
+* Matemática
+* Computação
+* Recursos Humanos
+* Informática
+
+O sistema não deve diferenciar departamentos, setores, seções ou categorias. Todos esses conceitos devem ser representados por grupos.
+
+---
+
+## Hierarquia de Grupos
+
+Um grupo pode possuir um grupo pai.
+
+A estrutura deve suportar múltiplos níveis hierárquicos.
+
+Exemplo:
+
+```text
+Administração
+├── Recursos Humanos
+├── Financeiro
+└── Informática
+
+Ensino
+├── Matemática
+└── Computação
+```
+
+A profundidade da hierarquia não deve ser limitada pela regra de negócio.
+
+---
+
+## Estrutura da Interface
+
+A tela de organização deve ser dividida em dois painéis independentes.
+
+### Painel de Grupos
+
+Exibe a árvore hierárquica dos grupos.
+
+Características:
+
+* Exibição em árvore.
+* Expansão e recolhimento de grupos.
+* Busca de grupos.
+* Rolagem independente.
+* Alteração de hierarquia.
+* Alteração de ordem.
+* Criação e edição de grupos.
+
+### Painel de Pessoas
+
+Exibe as pessoas pertencentes ao grupo atualmente selecionado.
+
+Características:
+
+* Rolagem independente.
+* Busca instantânea.
+* Paginação ou virtualização.
+* Seleção individual.
+* Seleção múltipla.
+* Seleção em massa.
+* Exibição rápida das informações principais.
+
+---
+
+## Gerenciamento de Grupos
+
+O gestor deve poder:
+
+* Criar grupos.
+* Renomear grupos.
+* Excluir grupos.
+* Ocultar grupos.
+* Alterar a posição dos grupos.
+* Alterar a hierarquia dos grupos.
+
+A exclusão de um grupo não deve excluir automaticamente as pessoas associadas a ele.
+
+Antes da exclusão, o sistema deve permitir:
+
+* Mover as pessoas para outro grupo.
+* Remover a associação das pessoas ao grupo.
+* Cancelar a operação.
+
+Caso existam pessoas associadas ao grupo, o sistema deve solicitar confirmação explícita antes da exclusão.
+
+---
+
+## Associação de Pessoas
+
+As pessoas são associadas aos grupos do catálogo.
+
+A associação utilizada para publicação é independente da classificação original fornecida pela API.
+
+O sistema deve permitir:
+
+* Associar pessoas a grupos.
+* Remover pessoas de grupos.
+* Mover pessoas entre grupos.
+* Reordenar pessoas dentro de um grupo.
+* Ocultar pessoas.
+* Selecionar múltiplas pessoas simultaneamente.
+
+---
+
+## Pesquisa
+
+A pesquisa de pessoas deve ser instantânea.
+
+Deve permitir localizar pessoas por:
+
+* Nome
+* E-mail
+* Telefone
+* Sala
+* Função
+
+A filtragem deve ocorrer sem recarregar a página.
+
+---
+
+## Seleção em Massa
+
+O sistema deve permitir:
+
+* Selecionar uma pessoa.
+* Selecionar múltiplas pessoas.
+* Selecionar todas as pessoas visíveis.
+* Selecionar todas as pessoas retornadas por uma pesquisa.
+
+Exemplo:
+
+```text
+Pesquisar: Silva
+
+Resultado: 27 pessoas
+
+☑ Selecionar todas
+```
+
+---
+
+## Movimentação de Pessoas
+
+A movimentação principal de pessoas deve ocorrer por ações em lote.
+
+Fluxo recomendado:
+
+```text
+Selecionar pessoas
+↓
+Mover para...
+↓
+Selecionar grupo destino
+↓
+Confirmar
+```
+
+Essa abordagem deve ser considerada o fluxo principal para movimentação de pessoas.
+
+---
+
+## Drag and Drop
+
+A interface administrativa deve oferecer recursos modernos de drag-and-drop.
+
+O recurso deve ser utilizado principalmente para operações de organização visual e reordenação.
+
+Exemplos:
+
+* Arrastar uma pessoa para outro grupo.
+* Arrastar uma pessoa para um subgrupo.
+* Reordenar pessoas dentro do mesmo grupo.
+* Arrastar grupos para alterar a hierarquia.
+* Arrastar grupos para alterar a ordem de exibição.
+
+O sistema pode permitir movimentação de múltiplas pessoas selecionadas através de drag-and-drop, porém esse não deve ser o fluxo principal para operações em larga escala.
+
+Para grandes volumes de dados, ações em lote devem ser priorizadas.
+
+---
+
+## Ordem de Exibição
+
+Todos os grupos devem possuir uma ordem configurável.
+
+Todas as pessoas dentro de um grupo devem possuir uma ordem configurável.
+
+A ordem definida pelo gestor deve ser utilizada:
+
+* Na interface pública.
+* Na geração do PDF.
+* Em exportações futuras.
+
+---
+
+## Performance
+
+A interface deve permanecer responsiva mesmo com grandes volumes de dados.
+
+Requisitos:
+
+* Suporte a centenas ou milhares de pessoas.
+* Virtualização de listas quando necessário.
+* Carregamento incremental.
+* Atualizações sem recarregamento completo da página.
+
+---
+
+## Responsividade
+
+A interface deve funcionar em:
+
+* Desktop.
+* Tablets.
+
+A versão desktop deve ser considerada prioritária, pois trata-se de uma ferramenta administrativa utilizada para operações de organização em larga escala.
+
+---
+
+## Objetivo de UX
+
+O sistema deve minimizar a quantidade de operações necessárias para reorganizar o catálogo.
+
+Operações em lote devem ser priorizadas em relação à movimentação individual.
+
+A organização de centenas de pessoas deve ser possível com poucos cliques e sem exigir ações repetitivas.
+
+A interface deve proporcionar uma experiência semelhante à de sistemas modernos de gerenciamento de conteúdo e diretórios corporativos.
+
+
+## Sincronização com a API
+
+A sincronização da API nunca deve sobrescrever a organização do catálogo.
+
+Durante uma sincronização, o sistema pode atualizar apenas os dados cadastrais das pessoas, tais como:
+
+* Nome
+* E-mail
+* Telefone
+* Sala
+* Função
+* Designação
+
+A sincronização não pode alterar:
+
+* Grupos criados pelo gestor.
+* Hierarquia dos grupos.
+* Ordem dos grupos.
+* Associação entre pessoas e grupos.
+* Ordem das pessoas.
+* Pessoas ocultas.
+
+A organização definida pelo gestor é a fonte de verdade para a publicação do catálogo.
+
 
 # Pessoas Criadas Manualmente
 
@@ -349,9 +645,133 @@ ADMIN_PASSWORD=trocar-esta-senha
 ```
 ---
 
+# Configuração das Credenciais da API
+
+O GuiaQuem consome uma API externa protegida por autenticação.
+
+As credenciais da API devem poder ser configuradas tanto por variáveis de ambiente quanto pela interface administrativa do sistema.
+
+## Objetivo
+
+Permitir que o sistema funcione imediatamente após a instalação utilizando variáveis de ambiente e, posteriormente, possibilitar que o administrador altere as configurações sem necessidade de acesso ao servidor.
+
+## Campos de Configuração
+
+O sistema deve suportar os seguintes parâmetros:
+
+* URL base da API
+* Usuário da API
+* Senha da API
+
+Exemplo:
+
+```env
+API_URL=https://api.exemplo.org
+API_USER=usuario
+API_PASSWORD=senha
+```
+
+## Fontes de Configuração
+
+As credenciais podem existir em duas fontes:
+
+1. Variáveis de ambiente (.env)
+2. Banco de dados
+
+## Regra de Precedência
+
+A fonte de dados prioritária deve ser o banco de dados.
+
+As regras de resolução devem ser:
+
+### Cenário 1
+
+Credenciais presentes apenas no arquivo `.env`.
+
+Resultado:
+
+* Utilizar as credenciais do `.env`.
+
+### Cenário 2
+
+Credenciais presentes no banco de dados.
+
+Resultado:
+
+* Utilizar as credenciais armazenadas no banco de dados.
+* Ignorar os valores do `.env`.
+
+### Cenário 3
+
+Credenciais ausentes no banco de dados e ausentes no `.env`.
+
+Resultado:
+
+* Considerar a integração não configurada.
+* Exibir mensagem apropriada para o administrador.
+* Impedir a execução da sincronização.
+
+## Interface Administrativa
+
+O administrador deve possuir uma tela para:
+
+* Visualizar a configuração atual.
+* Cadastrar credenciais.
+* Editar credenciais.
+* Remover credenciais.
+* Testar a conexão com a API.
+* Visualizar o resultado do teste de conexão.
+
+## Comportamento ao Salvar
+
+Quando o administrador salvar novas credenciais:
+
+* Os valores devem ser armazenados no banco de dados.
+* As novas credenciais passam a ser a configuração ativa do sistema.
+* As credenciais do banco passam a ter prioridade sobre as variáveis de ambiente.
+
+## Comportamento ao Excluir
+
+Quando o administrador excluir as credenciais armazenadas no banco:
+
+* O sistema deve voltar a utilizar as variáveis de ambiente, caso existam.
+* Caso não existam credenciais no `.env`, a integração deve ser considerada não configurada.
+
+## Segurança
+
+A senha da API não deve ser exibida em texto aberto após o salvamento.
+
+A senha deve ser armazenada de forma segura utilizando mecanismo de criptografia apropriado para dados que precisam ser recuperados posteriormente.
+
+Não utilizar hash irreversível (bcrypt ou equivalente) para a senha da API, pois a senha precisa ser recuperada para autenticação junto ao serviço externo.
+
+## Requisitos Técnicos
+
+A resolução das credenciais deve ser centralizada em um único serviço ou função.
+
+Toda comunicação com a API deve utilizar exclusivamente as credenciais resolvidas por esse mecanismo.
+
+Nenhum componente da aplicação deve acessar diretamente variáveis de ambiente ou registros de configuração sem utilizar o serviço de resolução de credenciais.
+
+## Fluxo de Resolução
+
+```text
+Banco de Dados possui credenciais?
+│
+├─ Sim
+│   └─ Utilizar credenciais do banco
+│
+└─ Não
+    │
+    ├─ .env possui credenciais?
+    │   └─ Utilizar credenciais do .env
+    │
+    └─ Não
+        └─ Integração não configurada
+```
 
 
-
+---
 # Funcionalidades Futuras Desejáveis
 
 * Importação por CSV.

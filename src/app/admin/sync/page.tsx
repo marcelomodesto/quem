@@ -71,11 +71,8 @@ export default function SyncPage() {
               <p>
                 Funcionários: {state.result.funcionariosImported} novos, {state.result.funcionariosUpdated} atualizados
               </p>
-              {state.result.departmentsCreated > 0 && (
-                <p>Departamentos criados: {state.result.departmentsCreated}</p>
-              )}
-              {state.result.sectorsCreated > 0 && (
-                <p>Setores criados: {state.result.sectorsCreated}</p>
+              {state.result.groupsCreated > 0 && (
+                <p>Grupos criados: {state.result.groupsCreated}</p>
               )}
               {state.result.errors.length > 0 && (
                 <p className="text-yellow-700">

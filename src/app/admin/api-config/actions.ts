@@ -23,9 +23,9 @@ export async function getApiConfig(): Promise<ApiConfigData> {
   const map = new Map(settings.map((s) => [s.key, s.value]));
 
   return {
-    url: map.get(KEYS.URL) ?? "",
-    user: map.get(KEYS.USER) ?? "",
-    hasPassword: !!map.get(KEYS.PASSWORD),
+    url: map.get(KEYS.URL) || process.env.API_URL || "",
+    user: map.get(KEYS.USER) || process.env.API_USER || "",
+    hasPassword: !!map.get(KEYS.PASSWORD) || !!process.env.API_PASSWORD,
   };
 }
 

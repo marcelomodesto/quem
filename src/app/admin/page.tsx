@@ -31,13 +31,13 @@ export default function AdminPage() {
         </Link>
 
         <Link
-          href="/admin"
+          href="/admin/catalogo"
           className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow"
         >
           <div className="text-2xl mb-2">👥</div>
-          <h2 className="font-semibold text-gray-900">Pessoas</h2>
+          <h2 className="font-semibold text-gray-900">Catalogo</h2>
           <p className="text-sm text-gray-500 mt-1">
-            Gerenciar pessoas do diretório
+            Organizar pessoas e grupos do catalogo
           </p>
         </Link>
 
